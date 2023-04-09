@@ -5,4 +5,4 @@ LSC:网格矫正法
 Dmeosaic：使用线性插值法
 BNR/NR：高斯滤波、双边滤波、均值滤波
 WB：灰色世界法、完美反射法、动态阈值法
-CCM：Colorcheck 24色卡，灯箱6500K左右色温拍摄，求解sensor RGB -> CIE XYZ 的颜色矫正矩阵CCM，再CIE XYZ -> sRGB
+CCM：使用Colorcheck 24色卡，灯箱6500K左右色温拍摄，非线性优化方法求解sensor RGB -> CIE XYZ 的颜色矫正矩阵CCM，再CIE XYZ -> sRGB
