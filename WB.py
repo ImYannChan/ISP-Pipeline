@@ -12,35 +12,59 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
+import raw_img
+
 
 class WB:
 
     def __init__(self, img):
-        self.__img = img
+        self.img = img
         self.img_size = img.shape
+
+    def raw_grey_world(self):
+        R, GR, GB, B = raw_img.raw_channel_per(self.img, bayer_type='GRBG')
+        G = (GR + GB) / 2
+        mean_r = np.mean(R, axis=None)
+        mean_g = np.mean(G, axis=None)
+        mean_b = np.mean(B, axis=None)
+        max_lux = np.max((mean_r, mean_g, mean_b))
+
+        gain_r = max_lux / mean_r
+        gain_g = max_lux / mean_g
+        gain_b = max_lux / mean_b
+
+        R = R * gain_r
+        GR = GR * gain_g
+        GB = GB * gain_g
+        B = B * gain_b
+
+        imgs = raw_img.raw_channel_combine(R, GR, GB, B, bayer_type='GRBG', m_size=self.img_size)
+        imgs = np.clip(imgs, a_min=0, a_max=1023)
+
+        return imgs.astype(np.uint16)
 
     def gray_world_WB(self):
         # 灰色世界算法实现白平衡
-        mean_r = np.mean(self.__img[:, :, 0], axis=None)
-        mean_g = np.mean(self.__img[:, :, 1], axis=None)
-        mean_b = np.mean(self.__img[:, :, 2], axis=None)
-
+        mean_r = np.mean(self.img[:, :, 0], axis=None)
+        mean_g = np.mean(self.img[:, :, 1], axis=None)
+        mean_b = np.mean(self.img[:, :, 2], axis=None)
         gain_r = mean_g / mean_r
         gain_b = mean_g / mean_b
+        imgs = np.zeros(self.img_size)
+        imgs[:, :, 0] = self.img[:, :, 0] * gain_r
+        imgs[:, :, 1] = self.img[:, :, 1]
+        imgs[:, :, 2] = self.img[:, :, 2] * gain_b
 
-        self.__img[:, :, 0] *= gain_r
-        self.__img[:, :, 2] *= gain_b
-        self.__img[self.__img > 1] = 1.0
-        self.__img[self.__img < 0] = 0
+        imgs = np.clip(imgs, a_min=0, a_max=1023)
 
-        return self.__img
+        return imgs.astype(np.uint16)
 
     def perfect_reflect_WB(self):
-        r = self.__img[:, :, 0]
-        g = self.__img[:, :, 1]
-        b = self.__img[:, :, 2]
+        r = self.img[:, :, 0]
+        g = self.img[:, :, 1]
+        b = self.img[:, :, 2]
 
-        img_add = np.sum(self.__img, axis=2)
+        img_add = np.sum(self.img, axis=2)
         sorted_img = np.sort(img_add.flatten(), kind='heapsort')
         ratio = 0.95  # 前5%作为白点值，阈值确定是一个重要的参数
         ind = int(len(sorted_img) * ratio)  #
@@ -51,20 +75,20 @@ class WB:
         gg = np.max(g, axis=None) / np.mean(g[thr_index])
         gb = np.max(b, axis=None) / np.mean(b[thr_index])
 
-        self.__img[:, :, 0] *= gr
-        self.__img[:, :, 1] *= gg
-        self.__img[:, :, 2] *= gb
-        self.__img[self.__img > 1] = 1.0
-        self.__img[self.__img < 0] = 0
+        imgs = np.zeros(self.img_size, dtype=np.uint16)
+        imgs[:, :, 0] = self.img[:, :, 0] * gr
+        imgs[:, :, 1] = self.img[:, :, 1] * gg
+        imgs[:, :, 2] = self.img[:, :, 2] * gb
+        imgs = np.clip(imgs, a_min=0, a_max=1023)
 
-        return self.__img
+        return imgs
 
     def automatic_WB(self):
         # Reference：Ching-Chih Weng, H. Chen and Chiou-Shann Fuh, "A novel automatic white balance method
         # for digital still cameras," 2005 IEEE International Symposium on Circuits and Systems (ISCAS),
         # Kobe, Japan, 2005, pp. 3801-3804 Vol. 4, doi: 10.1109/ISCAS.2005.1465458.
-
-        yuv = self.rgb2YCrCb(self.__img)
+        imgs = self.img / 1023
+        yuv = self.rgb2YCrCb(imgs)
         w, h = self.img_size[1], self.img_size[0]
         y = yuv[:, :, 0]
         Cr = yuv[:, :, 1]
@@ -122,9 +146,9 @@ class WB:
         y_max = np.max(y_selected, axis=None)
 
         # RGB三通道分离
-        R = self.__img[:, :, 0]
-        G = self.__img[:, :, 1]
-        B = self.__img[:, :, 2]
+        R = imgs[:, :, 0]
+        G = imgs[:, :, 1]
+        B = imgs[:, :, 2]
         mean_r = np.mean(R[idxs[0], idxs[1]], axis=None)
         mean_g = np.mean(G[idxs[0], idxs[1]], axis=None)
         mean_b = np.mean(B[idxs[0], idxs[1]], axis=None)
@@ -134,12 +158,16 @@ class WB:
         gain_g = y_max / mean_g
         gain_b = y_max / mean_b
 
-        self.__img[:, :, 0] *= gain_r
-        self.__img[:, :, 1] *= gain_g
-        self.__img[:, :, 2] *= gain_b
+        # 增益
+        imgs[:, :, 0] *= gain_r
+        imgs[:, :, 1] *= gain_g
+        imgs[:, :, 2] *= gain_b
+        np.clip(imgs * 1023, a_min=0, a_max=1023)
 
-        self.__img[self.__img > 1] = 1.0
-        return self.__img
+        return imgs.astype(np.uint16)
+
+    # def raw_gray_world_WB(self):
+
 
     def rgb2YCrCb(self, rgb):
         R, G, B = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]

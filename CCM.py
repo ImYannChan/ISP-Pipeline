@@ -18,7 +18,7 @@ class CCM:
     ### 此处的CCM使用的是D65光源下的颜色进行矫正，采用多项式扩展的方式
     def __init__(self):
 
-        self.fit_data = np.load('./Data/c24_rgb.npy')
+        self.fit_data = np.load('./Data/c24_rgb.npy') / 1023
         self.target_data = np.load('./Data/c24_xyz.npy') / 100.0  # 归一化到0-1
         self.degree = 2
         try:
@@ -29,14 +29,14 @@ class CCM:
             print("颜色矫正矩阵文件不存在，重新拟合颜色矫正矩阵...")
             self.CMatrix = []  # 储存最终的CCM的矩阵
             self.fit()
-            print("拟合完成...")
 
     def ccm(self, img):
         img_shape = img.shape
         img_f = np.reshape(img, (-1, 3))
-        predict_sRGB = self.predict(img_f)
+        predict_sRGB = self.predict(img_f/1023)
 
         predict_sRGB = np.reshape(predict_sRGB, img_shape)
+        print("CCM完成")
         return predict_sRGB
 
     def __read_data(self, path):
