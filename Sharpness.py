@@ -24,8 +24,8 @@ class Sharpness:
             [0, -1, 0]
         ])
         dst = cv2.filter2D(self.img, ddepth=-1, kernel=kernel)
-        dst[dst > 1] = 1.0
-        dst[dst < 0] = 0
+        dst = np.clip(dst, a_min=0, a_max=1.0)
+
         return dst
 
     def heq(self):
@@ -44,6 +44,51 @@ class Sharpness:
 
         rgb[rgb > 1] = 1.0
         rgb[rgb < 0] = 0
+
+        return rgb
+
+    def bilattera_sharpness(self):
+        ycrcb = cv2.cvtColor(self.img, cv2.COLOR_RGB2YCrCb)
+        y = ycrcb[:, :, 0]
+
+        # 减去模糊图，得到边缘图
+        sigmaC = 95
+        sigmaS = 95
+        d = 7
+        blur_Y = cv2.bilateralFilter(y, d=d, sigmaColor=sigmaC, sigmaSpace=sigmaS)
+        diff_y = y - blur_Y
+
+        # 加权融合原图和边缘图
+        w = 1.2
+        new_y = y + w * diff_y
+        ycrcb[:, :, 0] = new_y
+        rgb = cv2.cvtColor(ycrcb, cv2.COLOR_YCrCb2RGB)
+        rgb = np.clip(rgb, a_min=0, a_max=1.0)
+
+        return rgb
+
+    def gaussian_sharpness(self):
+        ycrcb = cv2.cvtColor(self.img, cv2.COLOR_RGB2YCrCb)
+        y = ycrcb[:, :, 0]
+        plt.imshow(y, cmap='gray')
+        plt.show()
+
+        # 减去模糊图，得到边缘图
+        sigma = 2.0
+        ksize = (5, 5)
+        edge_Y = cv2.GaussianBlur(y, ksize=ksize, sigmaX=sigma)
+        diff_y = y - edge_Y
+        plt.imshow(diff_y, cmap='gray')
+        plt.show()
+
+        # 加权融合原图和边缘图
+        w = 1.5
+        new_y = y + w * diff_y
+        ycrcb[:, :, 0] = new_y
+        rgb = cv2.cvtColor(ycrcb, cv2.COLOR_YCrCb2RGB)
+        rgb = np.clip(rgb, a_min=0, a_max=1.0)
+        plt.imshow(rgb)
+        plt.show()
 
         return rgb
 

@@ -38,12 +38,21 @@ class NR:
 
     def bilateral_NR(self):
         # 只支持float32和uint8
-        sigmaC = 40
-        sigmaS = 35
-        d = 9
+        sigmaC = 50
+        sigmaS = 50
+        d = 5
 
-        dst = cv2.bilateralFilter(self.img.astype(np.float32), d=d, sigmaColor=sigmaC, sigmaSpace=sigmaS)
+        dst = cv2.bilateralFilter(self.img, d=d, sigmaColor=sigmaC, sigmaSpace=sigmaS)
 
+        return dst
+
+    def nlm_NR(self):
+        templateWinSize = 5
+        searchWinSize = 21
+        h = 10
+        dst = cv2.fastNlMeansDenoisingColored(self.img, h=h, hColor=h,
+                                              templateWindowSize=templateWinSize,
+                                              searchWindowSize=searchWinSize)
         return dst
 
     def mean_BNR(self, bayer_type='GRBG'):
@@ -81,9 +90,9 @@ class NR:
         # 只支持float32和uint8
         c1, c2, c3, c4 = raw_img.raw_channel_per(self.img, bayer_type=bayer_type)
 
-        sigmaC = 15
-        sigmaS = 15
-        d = 5
+        sigmaC = 70
+        sigmaS = 70
+        d = 7
 
         c11 = cv2.bilateralFilter(c1, d=d, sigmaColor=sigmaC, sigmaSpace=sigmaS)
         c22 = cv2.bilateralFilter(c2, d=d, sigmaColor=sigmaC, sigmaSpace=sigmaS)
