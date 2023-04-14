@@ -1,1 +1,11 @@
-实现了从DNG格式的raw图像到正常彩色图像的isp流程，其中有许多待优化的地方，后续考虑继续丰富内容。
+本程序使用pyton初步实现了从DNG格式的raw图像到正常彩色图像的isp处理流程，其中有许多待优化的地方。
+整个流程为：BLC->AWB->BNR->LSC->Demosaic->NR->CCM->Gamma->Sharpness......
+
+LSC:网格矫正法
+Dmeosaic：使用线性插值法
+BNR/NR：高斯滤波、双边滤波、均值滤波
+WB：灰色世界法、完美反射法、动态阈值法
+CCM：使用Colorcheck 24色卡，灯箱6500K左右色温拍摄，非线性优化方法求解sensor RGB -> CIE XYZ 的颜色矫正矩阵CCM，再CIE XYZ -> sRGB，只实现了单色温，未考虑多色温。
+Sharpness: 原图边缘加权融合
+
+问题：仍然存在许多噪声，图像清晰度不足，颜色饱和度...需要进一步调试
